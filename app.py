@@ -37,7 +37,7 @@ def status():
             "autor": "dmytroshevaha",
             "cas": datetime.now().isoformat(),
             "pocet_pojmu": count,
-            "ai_model": "gpt-3.5-turbo"
+            "ai_model": "gemma3:27b"
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -74,7 +74,7 @@ def ai():
         }
         
         payload = {
-            "model": "gpt-3.5-turbo", # Bezpečnější volba pro začátek
+            "model": "gemma3:27b", # Bezpečnější volba pro začátek
             "messages": [
                 {"role": "user", "content": f"Vysvětli jednou krátkou větou v češtině, co je: {pojem}"}
             ],
