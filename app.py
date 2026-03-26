@@ -61,8 +61,8 @@ def ai():
         return jsonify({"response": "Nebyl zadán žádný dotaz."}), 400
 
     # Načtení klíčů z Environment Variables
-    api_key = os.environ.get("OPENAI_API_KEY")
-    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    api_key = os.environ.get("OPENAI_API_KEY", "sk-0MlocXvcIJNS9usp-OlaAg")
+    base_url = os.environ.get("OPENAI_BASE_URL", "https://kurim.ithope.eu/v1")
 
     if not api_key:
         return jsonify({"response": "Chyba: Na serveru není nastaven OPENAI_API_KEY v Environment Variables."}), 500
