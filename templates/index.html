@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Slovníček s AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-3xl mx-auto">
+        <h1 class="text-4xl font-bold text-blue-600 mb-8 text-center">IT Slovníček & Gemma 3</h1>
+
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4">Zeptej se AI na nový pojem</h2>
+            <div class="flex gap-2">
+                <input id="ai-input" type="text" placeholder="Např. Co je to Kubernetes?" class="flex-1 border p-2 rounded">
+                <button onclick="askAI()" id="ai-btn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Přenést dotaz</button>
+            </div>
+            <p id="ai-response" class="mt-4 text-gray-700 italic border-l-4 border-blue-300 pl-4 hidden"></p>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">Pojmy v databázi</h2>
+            <div id="pojmy-list" class="space-y-4">
+                <p class="text-gray-500">Načítám pojmy...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Načtení pojmů z API při startu
+        async function loadPojmy() {
+            const res = await fetch('/pojmy');
+            const data = await res.json();
+            const list = document.getElementById('pojmy-list');
+            list.innerHTML = data.map(p => `
+                <div class="border-b pb-2">
+                    <strong class="text-blue-500">${p.pojem}</strong>: ${p.definice}
+                </div>
+            `).join('');
+        }
+
+        // Dotaz na AI
+        async function askAI() {
+            const input = document.getElementById('ai-input');
+            const btn = document.getElementById('ai-btn');
+            const respP = document.getElementById('ai-response');
+            
+            if (!input.value) return;
+
+            btn.disabled = true;
+            btn.innerText = "Gemma přemýšlí...";
+            respP.classList.remove('hidden');
+            respP.innerText = "Čekám na odpověď...";
+
+            try {
+                const res = await fetch('/ai', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ prompt: input.value })
+                });
+                const data = await res.json();
+                respP.innerText = data.response;
+            } catch (e) {
+                respP.innerText = "Chyba: Nepodařilo se spojit s backendem.";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Přenést dotaz";
+            }
+        }
+
+        loadPojmy();
+    </script>
+</body>
+</html>
