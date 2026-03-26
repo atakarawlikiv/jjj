@@ -7,13 +7,13 @@ import os
 
 app = Flask(__name__)
 
-DB_PATH = os.getenv("DB_PATH", "/app/data/slovnicek.db")
+# Cesta k databázi (opraveno pro flexibilitu lokálně/server)
+DB_PATH = os.environ.get("DB_PATH", "slovnicek.db")
 
 # Inicializace DB při startu
 init_db()
 
 def get_db():
-    """Vytvoří připojení k SQLite databázi."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
@@ -37,7 +37,7 @@ def status():
             "autor": "dmytroshevaha",
             "cas": datetime.now().isoformat(),
             "pocet_pojmu": count,
-            "ai_model": "gpt-4o-mini" # Změněno na standardní OpenAI model pro cloud
+            "ai_model": "gpt-3.5-turbo"
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -60,35 +60,40 @@ def ai():
     if not pojem:
         return jsonify({"response": "Nebyl zadán žádný dotaz."}), 400
 
-    # Načtení klíčů ze serveru (podle zadání z obrázku 1)
+    # Načtení klíčů z Environment Variables
     api_key = os.environ.get("OPENAI_API_KEY")
-    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1") # Fallback na orig OpenAI
+    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
 
     if not api_key:
-        return jsonify({"response": "Chyba: Na serveru není nastaven OPENAI_API_KEY."}), 500
+        return jsonify({"response": "Chyba: Na serveru není nastaven OPENAI_API_KEY v Environment Variables."}), 500
 
     try:
-        # Přepsáno na standardní OpenAI API formát, který ten tvůj server vyžaduje
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
         
         payload = {
-            "model": "gpt-4o-mini", # Případně "gpt-3.5-turbo", záleží co ten proxy server v Kuřimi podporuje
+            "model": "gpt-3.5-turbo", # Bezpečnější volba pro začátek
             "messages": [
                 {"role": "user", "content": f"Vysvětli jednou krátkou větou v češtině, co je: {pojem}"}
             ],
             "temperature": 0.7
         }
 
-        # URL poskládáme tak, aby to šlo na endpoint /chat/completions
-        url = f"{base_url.rstrip('/')}/chat/completions"
+        # Inteligentní spojení URL adresy
+        base_url_cleaned = base_url.rstrip("/")
+        if not base_url_cleaned.endswith("/chat/completions"):
+            url = f"{base_url_cleaned}/chat/completions"
+        else:
+            url = base_url_cleaned
 
         response = requests.post(url, headers=headers, json=payload, timeout=45)
-        response.raise_for_status()
         
-        # Vytáhnutí odpovědi z OpenAI formátu
+        # Pokud server vrátí chybu, vypíšeme ji do odpovědi pro snazší ladění
+        if response.status_code != 200:
+            return jsonify({"response": f"Server vrátil chybu {response.status_code}: {response.text}"})
+
         vysledek = response.json()
         odpoved = vysledek["choices"][0]["message"]["content"]
 
@@ -98,6 +103,6 @@ def ai():
     return jsonify({"response": odpoved})
 
 if __name__ == "__main__":
-    # 🌟 OPRAVA PORTU PRO SERVER 🌟
+    # Načtení portu, který přidělí server
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
